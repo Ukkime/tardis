@@ -2,10 +2,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using System.Collections.Generic;
-using static System.Windows.Forms.AxHost;
 using tardis.ui;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace ui
 {
