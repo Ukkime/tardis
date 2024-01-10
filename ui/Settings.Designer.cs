@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             checkBox1 = new System.Windows.Forms.CheckBox();
-            textBox1 = new System.Windows.Forms.TextBox();
+            nodeName = new System.Windows.Forms.TextBox();
             textBox2 = new System.Windows.Forms.TextBox();
             textBox3 = new System.Windows.Forms.TextBox();
             label1 = new System.Windows.Forms.Label();
@@ -49,12 +49,13 @@
             checkBox1.Text = "checkBox1";
             checkBox1.UseVisualStyleBackColor = true;
             // 
-            // textBox1
+            // nodeName
             // 
-            textBox1.Location = new System.Drawing.Point(66, 17);
-            textBox1.Name = "textBox1";
-            textBox1.Size = new System.Drawing.Size(100, 23);
-            textBox1.TabIndex = 1;
+            nodeName.Location = new System.Drawing.Point(66, 17);
+            nodeName.Name = "nodeName";
+            nodeName.Size = new System.Drawing.Size(100, 23);
+            nodeName.TabIndex = 1;
+            nodeName.Text = "Nodo1";
             // 
             // textBox2
             // 
@@ -128,7 +129,7 @@
             Controls.Add(label1);
             Controls.Add(textBox3);
             Controls.Add(textBox2);
-            Controls.Add(textBox1);
+            Controls.Add(nodeName);
             Controls.Add(checkBox1);
             Name = "Settings";
             Text = "Settings";
@@ -139,7 +140,7 @@
         #endregion
 
         private System.Windows.Forms.CheckBox checkBox1;
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox nodeName;
         private System.Windows.Forms.TextBox textBox2;
         private System.Windows.Forms.TextBox textBox3;
         private System.Windows.Forms.Label label1;
