@@ -76,6 +76,9 @@ namespace ui
                 case StatusEnum.Descanso:
                     StatusColor = Color.Blue;
                     break;
+                case StatusEnum.Interacción:
+                    StatusColor = Color.Orange;
+                    break;
             }
             this.Invalidate();
         }

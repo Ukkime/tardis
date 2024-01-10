@@ -10,7 +10,8 @@ namespace tardis.ui
     {
         Disponible = 1,
         Ocupado = 2,
-        Descanso = 4,
-        Ausente = 5
+        Descanso = 3,
+        Ausente = 4,
+        Interacción = 5
     }
 }
