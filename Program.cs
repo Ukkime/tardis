@@ -11,6 +11,6 @@ class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new Overlay());
+        Application.Run(new Commands.StartTardis().Run());
     }
 }

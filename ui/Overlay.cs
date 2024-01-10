@@ -13,10 +13,14 @@ namespace ui
         private int diameter;
         private Color StatusColor;
         private StatusEnum StatusValue;
+        private DateTime LastStatusUpdate;
 
         // Variables para los gráficos
         private GraphicsPath path = new GraphicsPath();
         private GraphicsPath path2 = new GraphicsPath();
+
+        public StatusEnum statusValue { get => StatusValue; }
+        public DateTime lastStatusUpdate { get => LastStatusUpdate; }
 
         // Constructor
         public Overlay()
@@ -45,6 +49,8 @@ namespace ui
                 contextMenu.Items.Add(new ToolStripMenuItem(Enum.GetName(typeof(StatusEnum), st), null, (s, e) => ChangeStatus(st)));
             }
             contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(new ToolStripMenuItem("Configuración", null, (s, e) => new Settings()));
+            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(new ToolStripMenuItem("Salir", null, (s, e) => Application.Exit()));
 
             this.ContextMenuStrip = contextMenu;
@@ -60,6 +66,7 @@ namespace ui
         public void ChangeStatus(StatusEnum value)
         {
             this.StatusValue = value;
+            this.LastStatusUpdate = DateTime.Now;
             switch (value)
             {
                 case StatusEnum.Disponible:
@@ -67,6 +74,9 @@ namespace ui
                     break;
                 case StatusEnum.Ocupado:
                     StatusColor = Color.DarkRed;
+                    break;
+                case StatusEnum.Concentrado:
+                    StatusColor = Color.Red;
                     break;
                 case StatusEnum.Ausente:
                     StatusColor = Color.Gray;
@@ -204,6 +214,11 @@ namespace ui
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 e.Graphics.FillEllipse(brush, diameter / 11f, diameter / 11f, diameter / 1.2f, diameter / 1.2f);
             }
+        }
+
+        internal void SetStatus(StatusEnum descanso)
+        {
+            this.ChangeStatus(descanso);
         }
     }
 }
