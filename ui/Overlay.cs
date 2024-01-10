@@ -62,6 +62,7 @@ namespace ui
         // Método para cambiar el estado del color
         public void ChangeStatus(StatusEnum value)
         {
+            this.StatusValue = value;
             switch (value)
             {
                 case StatusEnum.Disponible:
