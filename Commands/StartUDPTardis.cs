@@ -10,26 +10,31 @@ using tardis.ui;
 using ui;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
+using System.IO;
 
 namespace tardis.Commands
 {
-    internal class StartTardis
+    internal class StartUDPTardis
     {
         private Overlay _ovl;
+        private IConfiguration _config;
         private System.Threading.Timer _timer;
         public static List<Dictionary<string, string>> states = new List<Dictionary<string, string>>();
 
-        public StartTardis() { }
+        public StartUDPTardis(IConfiguration config) {
+            this._config = config;
+        }
 
         public Form Run()
         {
-            this._ovl = new Overlay();
+            this._ovl = new Overlay(this._config);
             TimerCallback tcb = CheckOverlayStatus;
 
-            Task.Run(() => SendBroadcast(61456));
-            Task.Run(() => ReceiveBroadcast(61456));
+            Task.Run(() => SendBroadcast(Int32.Parse(_config["UDPSettings:port"])));
+            Task.Run(() => ReceiveBroadcast(Int32.Parse(_config["UDPSettings:port"])));
 
-            _timer = new System.Threading.Timer(tcb, null, 0, 1000); // Comprueba cada minuto
+            _timer = new System.Threading.Timer(tcb, null, 0, Int32.Parse(_config["UDPSettings:pomodoroFocusCheckFrequency"])); // Comprueba cada minuto
             return this._ovl;
         }
 
@@ -58,14 +63,14 @@ namespace tardis.Commands
 
                     await client.SendAsync(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, port));
 
-                    await Task.Delay(TimeSpan.FromSeconds(30)); // Espera 10 segundos antes de enviar el siguiente aviso
+                    await Task.Delay(TimeSpan.FromSeconds(Int32.Parse(_config["UDPSettings:broadcastFrequency"]))); // Espera x segundos antes de enviar el siguiente aviso
                 }
             }
         }
 
         private void CheckOverlayStatus(object state)
         {
-            if (this._ovl.statusValue == StatusEnum.Concentrado && DateTime.Now - this._ovl.lastStatusUpdate > TimeSpan.FromMinutes(90))
+            if (this._ovl.statusValue == StatusEnum.Concentrado && DateTime.Now - this._ovl.lastStatusUpdate > TimeSpan.FromMinutes(Int32.Parse(_config["UDPSettings:podoroFocusLimit"])))
             {
                 this._ovl.SetStatus(StatusEnum.Descanso);
                 System.Windows.Forms.MessageBox.Show("Llevas 1:30h concentrado, considera descansar un poco o dedicar unos minutos a otras tareas.");

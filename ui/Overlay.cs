@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 using tardis.ui;
@@ -17,6 +19,7 @@ namespace ui
         private StatusEnum StatusValue;
         private DateTime LastStatusUpdate;
         private String NodeName;
+        private IConfiguration _config;
         List<Dictionary<string, string>> Nstates;
 
         // Variables para los gráficos
@@ -28,8 +31,9 @@ namespace ui
         public string nodeName { get => NodeName; set => NodeName = value; }
 
         // Constructor
-        public Overlay()
+        public Overlay(IConfiguration config)
         {
+            this._config = config;
             // Inicialización de componentes y configuración de la apariencia del formulario
             //InitializeComponent();
             this.StartPosition = FormStartPosition.Manual;
@@ -47,24 +51,14 @@ namespace ui
             this.Width = diameter;
             this.Height = diameter;
 
-            // Crear un menú contextual y agregarlo al formulario
-            ContextMenuStrip contextMenu = new ContextMenuStrip();
-            foreach (StatusEnum st in Enum.GetValues(typeof(StatusEnum)))
-            {
-                contextMenu.Items.Add(new ToolStripMenuItem(Enum.GetName(typeof(StatusEnum), st), null, (s, e) => ChangeStatus(st)));
-            }
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(new ToolStripMenuItem("Configuración", null, (s, e) => new Settings(this)));
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(new ToolStripMenuItem("Salir", null, (s, e) => Application.Exit()));
-            contextMenu.Items.Add(new ToolStripSeparator());
-
-            this.ContextMenuStrip = contextMenu;
             this.Nstates = new List<Dictionary<string, string>>();
 
             // Configuración del estado inicial
             ChangeStatus(StatusEnum.Disponible);
-            NodeName = "Nodo1";
+            NodeName = _config["GeneralSettings:nodeName"];
+
+            // Crear un menú contextual y agregarlo al formulario
+            UpdateContextMenu();
 
             // Ajuste del formulario a la pantalla
             SnapToEdge();
@@ -211,7 +205,6 @@ namespace ui
             GraphicsPath pathnode = new GraphicsPath();
             foreach (var state in Nstates)
             {
-                //pathtmpelipse.AddEllipse(0, diameter + 1 + i * 15, 15, 15);
                 RectangleF node = new RectangleF(0, diameter + 1 + i * 15, 50, 15);
 
                 pathnode.AddRectangle(node);
@@ -232,9 +225,6 @@ namespace ui
                     StringFormat.GenericDefault); // El formato del texto.
 
                 // Dibuja el GraphicsPath en el formulario.
-                
-
-
                 i++;
                 
                 tmpregion.Union(pathnode);
@@ -262,7 +252,6 @@ namespace ui
                         default: 
                             cl = Brushes.Gray; 
                             break;
-
                     }
 
             
@@ -303,6 +292,7 @@ namespace ui
 
         public void UpdateNeighbors(List<Dictionary<string, string>> states)
         {
+            Boolean needScreenUpdate = false;
             DateTime now = DateTime.Now;
 
             foreach (var state in states)
@@ -310,28 +300,87 @@ namespace ui
                 var existingState = Nstates.FirstOrDefault(n => n["id"] == state["id"]);
                 if (existingState != null)
                 {
+                    if(existingState["status"] != state["status"])
+                    {
+                        needScreenUpdate = true;
+                        existingState["updatetime"] = state["updatetime"];
+                    }
                     // Si el estado ya existe, actualiza sus valores.
                     existingState["status"] = state["status"];
-                    existingState["id"] = state["id"];
                     existingState["datetime"] = state["datetime"];
                 }
                 else
                 {
-                    // Si el estado no existe, lo agrega a Nstates.
-                    Nstates.Add(state);
+                    // Si el estado no existe y es diferent del nodo local, lo agrega a Nstates.
+                    if(state["id"] != NodeName) 
+                    { 
+                        Nstates.Add(state);
+                        needScreenUpdate = true;
+                    }
                 }
             }
 
             // Elimina los registros que llevan más de 1 minuto sin comunicar.
-            Nstates.RemoveAll(n => (now - DateTime.Parse(n["datetime"])).TotalMinutes > 1);
+            if(Nstates.RemoveAll(n => (now - DateTime.Parse(n["datetime"])).TotalMinutes > 1) > 0)
+            {
+                needScreenUpdate = true;
+            }
 
+            if (needScreenUpdate)
+            {
+                this.Invoke(new Action(() =>
+                {
+                    SnapToEdge();
+                }));
+            }
             this.Invoke(new Action(() =>
             {
-                SnapToEdge();
+                UpdateContextMenu();
             }));
+
         }
 
+        private void UpdateContextMenu()
+        {
+            ContextMenuStrip contextMenu = new ContextMenuStrip();
+            foreach (StatusEnum st in Enum.GetValues(typeof(StatusEnum)))
+            {
+                contextMenu.Items.Add(new ToolStripMenuItem(Enum.GetName(typeof(StatusEnum), st), null, (s, e) => ChangeStatus(st)));
+            }
+            contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(new ToolStripMenuItem("Configuración", null, (s, e) => new Settings(this)));
+            contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(new ToolStripMenuItem("Salir", null, (s, e) => Application.Exit()));
+            contextMenu.Items.Add(new ToolStripSeparator());
 
+            if (Nstates.Count > 0)
+            {
+                foreach (var neighbor in Nstates)
+                {
+                    if (neighbor["id"] != NodeName)
+                    {
+                        string updateTime = neighbor["updatetime"].Substring(11, neighbor["updatetime"].Length - 11);
+                        DateTime updateTimeAsDateTime = DateTime.ParseExact(updateTime, "HH:mm:ss", CultureInfo.InvariantCulture);
+                        DateTime now = DateTime.Now;
+                        TimeSpan timeSpan = now - updateTimeAsDateTime;
+
+                        // timeSpan contiene la diferencia de tiempo
+                        double hoursPassed = timeSpan.TotalHours; // Total de horas pasadas
+                        double minutesPassed = timeSpan.TotalMinutes; // Total de minutos pasados
+                        double secondsPassed = timeSpan.TotalSeconds; // Total de segundos pasados
+
+                        string menuItemText = $"{neighbor["id"]}: {neighbor["status"]} desde las {neighbor["updatetime"].Substring(11, neighbor["updatetime"].Length - 11)} (hace {Math.Floor(minutesPassed)} min)";
+                        contextMenu.Items.Add(new ToolStripMenuItem(menuItemText));
+                    }
+                }
+            } 
+            else
+            {
+                contextMenu.Items.Add(new ToolStripMenuItem("No se han detectado compañeros"));
+            }
+
+            this.ContextMenuStrip = contextMenu;
+        }
     }
 }
 
