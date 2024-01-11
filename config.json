@@ -1,0 +1,24 @@
+﻿{
+  "GeneralSettings": {
+    "neighborMode": "UDP",
+    "__neighborMode_accepted_values__": {
+      "UDP": "Configura la aplicación para trabajar sin servidor, buscando compañeros por la red local usando el protocolo UDP",
+      "SERVER": "Configura la aplicación para trabajar conectandose a un servidor que gestionara los nodos y la interacción entre ellos"
+    },
+    "nodeName" : "Nodo1"
+  },
+  "UDPSettings": {
+    "__important__": "Solo activo si el neighborMode = UDP",
+    "port": 61456,
+    "broadcastFrequency": 1,
+    "pomodoroFocusCheckFrequency": 1000,
+    "podoroFocusLimit": 90
+  },
+  "ServerSettings": {
+    "__important__": "Solo activo si el neighborMode = SERVER",
+    "restApiURL": "https://restapi.com",
+    "restApitoken": "eyjshfkffdsf.dsfdsfsdfdsf.dsgsduasytduasd",
+    "restApiNeighborCode": "SHA256-887VH8DOGORDVGDOGDBGPD9BGPDBG9DB",
+    "updateFrequency": 1
+  }
+}
