@@ -303,6 +303,8 @@ namespace ui
 
         public void UpdateNeighbors(List<Dictionary<string, string>> states)
         {
+            DateTime now = DateTime.Now;
+
             foreach (var state in states)
             {
                 var existingState = Nstates.FirstOrDefault(n => n["id"] == state["id"]);
@@ -319,6 +321,9 @@ namespace ui
                     Nstates.Add(state);
                 }
             }
+
+            // Elimina los registros que llevan más de 1 minuto sin comunicar.
+            Nstates.RemoveAll(n => (now - DateTime.Parse(n["datetime"])).TotalMinutes > 1);
 
             this.Invoke(new Action(() =>
             {
