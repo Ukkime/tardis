@@ -16,8 +16,7 @@
   },
   "ServerSettings": {
     "__important__": "Solo activo si el neighborMode = SERVER",
-    "restApiURL": "https://alexlatorre.com/sandbox",
-    "restApitoken": "eyjshfkffdsf.dsfdsfsdfdsf.dsgsduasytduasd",
+    "restApiURL": "http://localhost:3000",
     "restApiNeighborCode": "SHA256-887VH8DOGORDVGDOGDBGPD9BGPDBG9DB",
     "updateFrequency": 1
   }
