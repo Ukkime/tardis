@@ -1,11 +1,11 @@
 ﻿{
   "GeneralSettings": {
-    "neighborMode": "UDP",
+    "neighborMode": "SERVER",
     "__neighborMode_accepted_values__": {
       "UDP": "Configura la aplicación para trabajar sin servidor, buscando compañeros por la red local usando el protocolo UDP",
       "SERVER": "Configura la aplicación para trabajar conectandose a un servidor que gestionara los nodos y la interacción entre ellos"
     },
-    "nodeName" : "Nodo1"
+    "nodeName": "Nodo1"
   },
   "UDPSettings": {
     "__important__": "Solo activo si el neighborMode = UDP",
@@ -16,7 +16,7 @@
   },
   "ServerSettings": {
     "__important__": "Solo activo si el neighborMode = SERVER",
-    "restApiURL": "https://restapi.com",
+    "restApiURL": "https://alexlatorre.com/sandbox",
     "restApitoken": "eyjshfkffdsf.dsfdsfsdfdsf.dsgsduasytduasd",
     "restApiNeighborCode": "SHA256-887VH8DOGORDVGDOGDBGPD9BGPDBG9DB",
     "updateFrequency": 1
