@@ -33,16 +33,19 @@ function handleGroupAndNode(groupId, nodeName, status = "Disponible") {
       // Crea un nuevo nodo si no existe
       const newNode = {
         Name: nodeName,
-        LastCommunication: new Date().toISOString(),
-        Status: status,
+        Updatetime: moment().tz('Europe/Madrid').format(),
+        Datetime: moment().tz('Europe/Madrid').format(),
+        Status: "Disponible",
       };
       group.NeighborNodes.push(newNode);
       group.NodeCount += 1;
     } else {
       // Actualiza el estado del nodo si existe
-      group.NeighborNodes[nodeIndex].Status = status;
-      group.NeighborNodes[nodeIndex].LastCommunication =
-        new Date().toISOString();
+      if (status !== null) {
+        group.NeighborNodes[nodeIndex].Status = status;
+        group.NeighborNodes[nodeIndex].Datetime = moment().tz('Europe/Madrid').format(); // Agrega datetime
+      }
+      group.NeighborNodes[nodeIndex].Updatetime = moment().tz('Europe/Madrid').format();
     }
 
     return groupRef.set(group);
