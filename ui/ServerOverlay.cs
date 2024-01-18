@@ -1,30 +1,22 @@
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using System.Timers;
 using System.Windows.Forms;
+using tardis.Services;
 using tardis.ui;
+
 
 namespace ui
 {
-    public partial class Overlay : Form
+    public partial class ServerOverlay : Overlay
     {
-        // Para ocultar la ventana del listado de Win+Tab o Alt+Tab
-        // Puede no funcionar en todas las versiones de windows:
-        // TO DO: Comprobar compatibilidad
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_EX_TOOLWINDOW = 0x00000080;
-
         // Variables para almacenar el desplazamiento, el diámetro y el estado del color
         private Point offset;
         private int diameter;
@@ -39,12 +31,10 @@ namespace ui
         private GraphicsPath path = new GraphicsPath();
         private GraphicsPath path2 = new GraphicsPath();
 
-        public StatusEnum statusValue { get => StatusValue; }
-        public DateTime lastStatusUpdate { get => LastStatusUpdate; }
-        public string nodeName { get => NodeName; set => NodeName = value; }
+        private System.Timers.Timer _timer;
 
         // Constructor
-        public Overlay(IConfiguration config)
+        public ServerOverlay(IConfiguration config) : base(config)
         {
             this._config = config;
             // Inicialización de componentes y configuración de la apariencia del formulario
@@ -72,6 +62,10 @@ namespace ui
             ChangeStatus(StatusEnum.Disponible);
             NodeName = _config["GeneralSettings:nodeName"];
 
+            _timer = new System.Timers.Timer(1000); // Intervalo de 10 segundos
+            _timer.Elapsed += async (sender, e) => await UpdateNeighborsAsync();
+            _timer.Start();
+
             // Crear un menú contextual y agregarlo al formulario
             UpdateContextMenu();
 
@@ -79,96 +73,75 @@ namespace ui
             SnapToEdge();
         }
 
-        protected override void OnShown(EventArgs e)
+        public async Task UpdateNeighborsAsync()
         {
-            base.OnShown(e);
 
-            int exStyle = GetWindowLong(this.Handle, GWL_EXSTYLE);
-            SetWindowLong(this.Handle, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
+                Boolean needScreenUpdate = false;
+                DateTime now = DateTime.Now;
+
+                // Get json data
+                var responseString = await new RestService(this._config).GetNeighborsAsync("5e884898da280f36e7c310dd233371204884883bfe2a5094b5e3b3ebc3d60f20");
+                var neighbor = JsonConvert.DeserializeObject<Neighbor>(responseString);
+
+                if (neighbor != null)
+                {
+                    foreach (var neighborNode in neighbor.NeighborNodes)
+                    {
+                        var existingState = Nstates.FirstOrDefault(n => n["name"] == neighborNode.Name);
+                        if (existingState != null)
+                        {
+                            if (existingState["status"] != neighborNode.Status)
+                            {
+                                existingState["updatetime"] = neighborNode.LastCommunication.ToString();
+                                needScreenUpdate = true;
+                            }
+                            // Si el estado ya existe, actualiza sus valores.
+                            existingState["status"] = neighborNode.Status;
+                            existingState["datetime"] = neighborNode.LastCommunication.ToString();
+                        }
+                        else
+                        {
+                            // Si el estado no existe y es diferent del nodo local, lo agrega a Nstates.
+                            if (neighborNode.Name != NodeName)
+                            {
+                                Dictionary<string, string> tmpDict = new Dictionary<string, string>();
+
+                                tmpDict.Add("name", neighborNode.Name);
+                                tmpDict.Add("status", neighborNode.Status);
+                                tmpDict.Add("updatetime", neighborNode.LastCommunication.ToString());
+                                tmpDict.Add("datetime", neighborNode.LastCommunication.ToString());
+
+                                Nstates.Add(tmpDict);
+                                needScreenUpdate = true;
+                            }
+                        }
+                        if(needScreenUpdate)
+                    {
+                        break;
+                    }
+                    }
+
+                    // Elimina los registros que llevan más de 1 minuto sin comunicar.
+                    //if (Nstates.RemoveAll(n => (now - DateTime.Parse(n["datetime"])).TotalMinutes > 1) > 0)
+                    //{
+                    //    needScreenUpdate = true;
+                    //}
+
+                    if (needScreenUpdate)
+                    {
+                        this.Invoke(new Action(() =>
+                        {
+                            SnapToEdge();
+                        }));
+                    }
+                    this.Invoke(new Action(() =>
+                    {
+                        UpdateContextMenu();
+                    }));
+                }
         }
 
-        // Método para cambiar el estado del color
-        public void ChangeStatus(StatusEnum value)
-        {
-            this.StatusValue = value;
-            this.LastStatusUpdate = DateTime.Now;
-            switch (value)
-            {
-                case StatusEnum.Disponible:
-                    StatusColor = Color.Green;
-                    break;
-                case StatusEnum.Ocupado:
-                    StatusColor = Color.DarkRed;
-                    break;
-                case StatusEnum.Concentrado:
-                    StatusColor = Color.Red;
-                    break;
-                case StatusEnum.Ausente:
-                    StatusColor = Color.Gray;
-                    break;
-                case StatusEnum.Descanso:
-                    StatusColor = Color.Blue;
-                    break;
-                case StatusEnum.Interacción:
-                    StatusColor = Color.Orange;
-                    break;
-            }
-            this.Invalidate();
-        }
-
-        // Método para mover el formulario arrastrándolo con el ratón
-        protected override void OnMouseDown(MouseEventArgs e)
-        {
-            base.OnMouseDown(e);
-            if (e.Button == MouseButtons.Left)
-            {
-                // Obtener la posición actual del ratón
-                int mouseX = Control.MousePosition.X;
-                int mouseY = Control.MousePosition.Y;
-
-                // Obtener la posición actual del formulario
-                int formX = this.Location.X;
-                int formY = this.Location.Y;
-
-                // Calcular el desplazamiento entre el ratón y el formulario
-                int offsetX = mouseX - formX;
-                int offsetY = mouseY - formY;
-
-                // Almacenar el desplazamiento en una variable de nivel de clase
-                this.offset = new Point(offsetX, offsetY);
-
-                // Mover el formulario con el ratón
-                this.MouseMove += MouseMoveHandler;
-            }
-        }
-
-        // Método para mover el formulario con el ratón
-        protected void MouseMoveHandler(object sender, MouseEventArgs e)
-        {
-            // Obtener la nueva posición del ratón
-            int mouseX = Control.MousePosition.X;
-            int mouseY = Control.MousePosition.Y;
-
-            // Establecer la nueva posición del formulario
-            this.Location = new Point(mouseX - this.offset.X, mouseY - this.offset.Y);
-        }
-
-        // Método para liberar el ratón cuando se suelta el botón
-        protected override void OnMouseUp(MouseEventArgs e)
-        {
-            base.OnMouseUp(e);
-            if (e.Button == MouseButtons.Left)
-            {
-                // Eliminar el controlador de eventos de movimiento del ratón
-                this.MouseMove -= MouseMoveHandler;
-
-                // Ajustar el formulario al borde más cercano de la pantalla
-                SnapToEdge();
-            }
-        }
-
-        // Método para ajustar el formulario al borde más cercano de la pantalla
-        protected virtual void SnapToEdge()
+        protected override void SnapToEdge()
         {
             // Obtener el área de trabajo de la pantalla
             Rectangle screen = Screen.PrimaryScreen.WorkingArea;
@@ -249,13 +222,13 @@ namespace ui
 
                 // Dibuja el GraphicsPath en el formulario.
                 i++;
-                
+
                 tmpregion.Union(pathnode);
                 tmpregion.Union(pathtmptext);
                 this.Paint += (s, e) =>
                 {
                     Brush cl;
-                    switch(state["status"])
+                    switch (state["status"])
                     {
                         case "Disponible":
                             cl = Brushes.Green;
@@ -272,15 +245,15 @@ namespace ui
                         case "Concentrado":
                             cl = Brushes.Red;
                             break;
-                        default: 
-                            cl = Brushes.Gray; 
+                        default:
+                            cl = Brushes.Gray;
                             break;
                     }
 
-            
+
                     e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                     e.Graphics.FillPath(cl, pathtmptext);
-                   
+
                 };
             }
 
@@ -294,7 +267,6 @@ namespace ui
             this.Invalidate();
         }
 
-        // Método para dibujar el círculo en la región definida
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -308,62 +280,7 @@ namespace ui
             }
         }
 
-        public void SetStatus(StatusEnum descanso)
-        {
-            this.ChangeStatus(descanso);
-        }
-
-        public virtual void UpdateNeighbors(List<Dictionary<string, string>> states)
-        {
-            Boolean needScreenUpdate = false;
-            DateTime now = DateTime.Now;
-
-            foreach (var state in states)
-            {
-                var existingState = Nstates.FirstOrDefault(n => n["name"] == state["name"]);
-                if (existingState != null)
-                {
-                    if(existingState["status"] != state["status"])
-                    {
-                        needScreenUpdate = true;
-                        existingState["updatetime"] = state["updatetime"];
-                    }
-                    // Si el estado ya existe, actualiza sus valores.
-                    existingState["status"] = state["status"];
-                    existingState["datetime"] = state["datetime"];
-                }
-                else
-                {
-                    // Si el estado no existe y es diferent del nodo local, lo agrega a Nstates.
-                    if(state["name"] != NodeName) 
-                    { 
-                        Nstates.Add(state);
-                        needScreenUpdate = true;
-                    }
-                }
-            }
-
-            // Elimina los registros que llevan más de 1 minuto sin comunicar.
-            if(Nstates.RemoveAll(n => (now - DateTime.Parse(n["datetime"])).TotalMinutes > 1) > 0)
-            {
-                needScreenUpdate = true;
-            }
-
-            if (needScreenUpdate)
-            {
-                this.Invoke(new Action(() =>
-                {
-                    SnapToEdge();
-                }));
-            }
-            this.Invoke(new Action(() =>
-            {
-                UpdateContextMenu();
-            }));
-
-        }
-
-        protected virtual void UpdateContextMenu()
+        protected override void UpdateContextMenu()
         {
             ContextMenuStrip contextMenu = new ContextMenuStrip();
             foreach (StatusEnum st in Enum.GetValues(typeof(StatusEnum)))
@@ -376,16 +293,16 @@ namespace ui
             contextMenu.Items.Add(new ToolStripMenuItem("Salir", null, (s, e) => Application.Exit()));
             contextMenu.Items.Add(new ToolStripSeparator());
 
-            if (this.Nstates == null)
+            if(this.Nstates == null)
             {
                 this.Nstates = new List<Dictionary<string, string>>();
             }
 
-            if (Nstates.Count > 0)
+            if (this.Nstates.Count > 0)
             {
-                foreach (var neighbor in Nstates)
+                foreach (var neighbor in this.Nstates)
                 {
-                    if (neighbor["name"] != NodeName)
+                    if (neighbor["name"] != this.NodeName)
                     {
                         string updateTime = neighbor["updatetime"].Substring(11, neighbor["updatetime"].Length - 11);
                         DateTime updateTimeAsDateTime = DateTime.ParseExact(updateTime, "HH:mm:ss", CultureInfo.InvariantCulture);
@@ -401,7 +318,7 @@ namespace ui
                         contextMenu.Items.Add(new ToolStripMenuItem(menuItemText));
                     }
                 }
-            } 
+            }
             else
             {
                 contextMenu.Items.Add(new ToolStripMenuItem("No se han detectado compañeros"));

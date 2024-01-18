@@ -54,7 +54,7 @@ namespace tardis.Commands
                     var state = new Dictionary<string, string>
                     {
                         { "status", status },
-                        { "id", nodeName },
+                        { "name", nodeName },
                         { "datetime", dt.ToString() }
                     };
 
