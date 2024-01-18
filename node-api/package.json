@@ -1,6 +1,8 @@
 {
   "dependencies": {
     "express": "^4.18.2",
-    "firebase-admin": "^12.0.0"
+    "firebase-admin": "^12.0.0",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.5.44"
   }
 }
