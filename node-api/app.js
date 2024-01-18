@@ -52,31 +52,32 @@ function handleGroupAndNode(groupId, nodeName, status = null) {
   });
 }
 
-// Función para limpiar nodos y grupos inactivos
-function cleanInactiveNodesAndGroups() {
+// Función para recorrer los grupos y limpiar nodos y grupos inactivos
+async function cleanInactiveNodesAndGroups() {
   let groupRef = db.ref("groups");
-  groupRef.once("value").then((snapshot) => {
-    let groups = snapshot.val();
-    let currentTime = moment().tz('Europe/Madrid').format();
+  let snapshot = await groupRef.once("value");
+  let groups = snapshot.val();
+  let currentTime = moment().tz('Europe/Madrid').valueOf();
 
-    for (let groupId in groups) {
-      let group = groups[groupId];
-      let activeNodes = group.NeighborNodes.filter((node) => {
-        let nodeTime = moment.tz(node.Updatetime, 'Europe/Madrid').valueOf();
-        return currentTime - nodeTime <= 5 * 60 * 1000; // 5 minutos
-      });
+  for (let groupId in groups) {
+    let group = groups[groupId];
+    let nodeCount = group.NeighborNodes.length;
 
-      if (activeNodes.length > 0) {
-        // Actualiza los nodos activos del grupo
-        group.NeighborNodes = activeNodes;
-        group.NodeCount = activeNodes.length;
-        groupRef.child(groupId).set(group);
-      } else {
-        // Elimina el grupo si no tiene nodos activos
-        groupRef.child(groupId).remove();
+    for (let i = 0; i < group.NeighborNodes.length; i++) {
+      let nodeTime = moment.tz(group.NeighborNodes[i].Updatetime, 'Europe/Madrid').valueOf();
+      let diff = currentTime - nodeTime;
+      if (diff > 5 * 60 * 1000) { // 5 minutos
+        // Elimina el nodo si es inactivo
+        await groupRef.child(groupId).child('NeighborNodes').child(i).remove();
+        nodeCount--;
       }
     }
-  });
+
+    if (nodeCount === 0) {
+      // Elimina el grupo si no tiene nodos activos
+      await groupRef.child(groupId).remove();
+    }
+  }
 }
 
 // Ejecuta la función de limpieza cada 1 minuto
