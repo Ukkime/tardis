@@ -13,7 +13,7 @@ const db = admin.database();
 const app = express();
 
 // Función para manejar la creación de grupos y nodos
-function handleGroupAndNode(groupId, nodeName, status = "Disponible") {
+function handleGroupAndNode(groupId, nodeName, status = null) {
   let groupRef = db.ref("groups/" + groupId);
   return groupRef.once("value").then((snapshot) => {
     let group = snapshot.val();
