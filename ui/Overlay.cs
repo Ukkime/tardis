@@ -25,6 +25,17 @@ namespace ui
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
 
+        // Mantiene la ventana arriba siempre
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        const UInt32 SWP_NOSIZE = 0x0001;
+        const UInt32 SWP_NOMOVE = 0x0002;
+        const UInt32 TOPMOST_FLAGS = SWP_NOMOVE | SWP_NOSIZE;
+
         // Variables para almacenar el desplazamiento, el diámetro y el estado del color
         private Point offset;
         private int diameter;
@@ -49,6 +60,7 @@ namespace ui
             this._config = config;
             // Inicialización de componentes y configuración de la apariencia del formulario
             //InitializeComponent();
+            SetWindowPos(this.Handle, HWND_TOPMOST, 0, 0, 0, 0, TOPMOST_FLAGS);
             this.StartPosition = FormStartPosition.Manual;
             this.Location = new Point(100, 100);
             this.Left = Screen.PrimaryScreen.WorkingArea.Right - 5;
@@ -88,7 +100,7 @@ namespace ui
         }
 
         // Método para cambiar el estado del color
-        public void ChangeStatus(StatusEnum value)
+        public virtual async void ChangeStatus(StatusEnum value)
         {
             this.StatusValue = value;
             this.LastStatusUpdate = DateTime.Now;

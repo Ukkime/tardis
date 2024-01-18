@@ -73,72 +73,122 @@ namespace ui
             SnapToEdge();
         }
 
+        public override async void ChangeStatus(StatusEnum value)
+        {
+            this.StatusValue = value;
+            this.LastStatusUpdate = DateTime.Now;
+            switch (value)
+            {
+                case StatusEnum.Disponible:
+                    StatusColor = Color.Green;
+                    break;
+                case StatusEnum.Ocupado:
+                    StatusColor = Color.DarkRed;
+                    break;
+                case StatusEnum.Concentrado:
+                    StatusColor = Color.Red;
+                    break;
+                case StatusEnum.Ausente:
+                    StatusColor = Color.Gray;
+                    break;
+                case StatusEnum.Descanso:
+                    StatusColor = Color.Blue;
+                    break;
+                case StatusEnum.Interacción:
+                    StatusColor = Color.Orange;
+                    break;
+            }
+            this.Invalidate();
+
+            // Avisamos a la API del cambio
+            if(this._config != null)
+            {
+                string ressp = await new RestService(this._config).UpdateNodeStatusAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"], value.ToString());
+            }
+         
+        }
+
         public async Task UpdateNeighborsAsync()
         {
 
-                Boolean needScreenUpdate = false;
-                DateTime now = DateTime.Now;
+            Boolean needScreenUpdate = false;
+            DateTime now = DateTime.Now;
 
-                // Get json data
-                var responseString = await new RestService(this._config).GetGroupAndNodeAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"]);
-                var neighbor = JsonConvert.DeserializeObject<Neighbor>(responseString);
+            // Get json data
+            var responseString = await new RestService(this._config).GetGroupAndNodeAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"]);
+            var neighbor = JsonConvert.DeserializeObject<Neighbor>(responseString);
 
-                if (neighbor != null)
+            if (neighbor != null)
+            {
+                foreach (var neighborNode in neighbor.NeighborNodes)
                 {
-                    foreach (var neighborNode in neighbor.NeighborNodes)
+                    var existingState = Nstates.FirstOrDefault(n => n["name"] == neighborNode.Name);
+                    if (existingState != null)
                     {
-                        var existingState = Nstates.FirstOrDefault(n => n["name"] == neighborNode.Name);
-                        if (existingState != null)
+                        if (existingState["status"] != neighborNode.Status)
                         {
-                            if (existingState["status"] != neighborNode.Status)
-                            {
-                                existingState["updatetime"] = neighborNode.LastCommunication.ToString();
-                                needScreenUpdate = true;
-                            }
-                            // Si el estado ya existe, actualiza sus valores.
-                            existingState["status"] = neighborNode.Status;
-                            existingState["datetime"] = neighborNode.LastCommunication.ToString();
+                            existingState["updatetime"] = neighborNode.Updatetime.ToString();
+                            existingState["datetime"] = neighborNode.Datetime.ToString();
+                            needScreenUpdate = true;
                         }
-                        else
+                        // Si el estado ya existe, actualiza sus valores.
+                        existingState["status"] = neighborNode.Status;
+                        existingState["updatetime"] = neighborNode.Updatetime.ToString();
+                    }
+                    else
+                    {
+                        // Si el estado no existe y es diferent del nodo local, lo agrega a Nstates.
+                        if (neighborNode.Name != NodeName)
                         {
-                            // Si el estado no existe y es diferent del nodo local, lo agrega a Nstates.
-                            if (neighborNode.Name != NodeName)
-                            {
-                                Dictionary<string, string> tmpDict = new Dictionary<string, string>();
+                            Dictionary<string, string> tmpDict = new Dictionary<string, string>();
 
-                                tmpDict.Add("name", neighborNode.Name);
-                                tmpDict.Add("status", neighborNode.Status);
-                                tmpDict.Add("updatetime", neighborNode.LastCommunication.ToString());
-                                tmpDict.Add("datetime", neighborNode.LastCommunication.ToString());
+                            tmpDict.Add("name", neighborNode.Name);
+                            tmpDict.Add("status", neighborNode.Status);
+                            tmpDict.Add("updatetime", neighborNode.Updatetime.ToString());
+                            tmpDict.Add("datetime", neighborNode.Datetime.ToString());
 
-                                Nstates.Add(tmpDict);
-                                needScreenUpdate = true;
-                            }
+                            Nstates.Add(tmpDict);
+                            needScreenUpdate = true;
                         }
-                        if(needScreenUpdate)
+                    }
+                    if (needScreenUpdate)
                     {
                         break;
                     }
-                    }
+                }
 
-                    // Elimina los registros que llevan más de 1 minuto sin comunicar.
-                    //if (Nstates.RemoveAll(n => (now - DateTime.Parse(n["datetime"])).TotalMinutes > 1) > 0)
-                    //{
-                    //    needScreenUpdate = true;
-                    //}
-
-                    if (needScreenUpdate)
+                List<Dictionary<string, string>> toRemove = new List<Dictionary<string, string>>();
+                foreach (var n in Nstates)
+                {
+                    double t = (now - DateTime.Parse(n["updatetime"])).TotalMinutes;
+                    if (t > 5)
                     {
-                        this.Invoke(new Action(() =>
-                        {
-                            SnapToEdge();
-                        }));
+                        toRemove.Add(n);
                     }
+                }
+
+                foreach (var n in toRemove)
+                {
+                    Nstates.RemoveAll(state => state["name"] == n["name"]);
+                }
+
+                if (toRemove.Count > 0)
+                {
+                    needScreenUpdate = true;
+                }
+
+                if (needScreenUpdate)
+                {
                     this.Invoke(new Action(() =>
                     {
-                        UpdateContextMenu();
+                        SnapToEdge();
                     }));
                 }
+                this.Invoke(new Action(() =>
+                {
+                    UpdateContextMenu();
+                }));
+            }
         }
 
         protected override void SnapToEdge()
@@ -304,7 +354,7 @@ namespace ui
                 {
                     if (neighbor["name"] != this.NodeName)
                     {
-                        string updateTime = neighbor["updatetime"].Substring(11, neighbor["updatetime"].Length - 11);
+                        string updateTime = neighbor["datetime"].Substring(11, neighbor["datetime"].Length - 11);
                         DateTime updateTimeAsDateTime = DateTime.ParseExact(updateTime, "HH:mm:ss", CultureInfo.InvariantCulture);
                         DateTime now = DateTime.Now;
                         TimeSpan timeSpan = now - updateTimeAsDateTime;
@@ -314,7 +364,7 @@ namespace ui
                         double minutesPassed = timeSpan.TotalMinutes; // Total de minutos pasados
                         double secondsPassed = timeSpan.TotalSeconds; // Total de segundos pasados
 
-                        string menuItemText = $"{neighbor["name"]}: {neighbor["status"]} desde las {neighbor["updatetime"].Substring(11, neighbor["updatetime"].Length - 11)} (hace {Math.Floor(minutesPassed)} min)";
+                        string menuItemText = $"{neighbor["name"]}: {neighbor["status"]} desde las {neighbor["datetime"].Substring(11, neighbor["datetime"].Length - 11)} (hace {Math.Floor(minutesPassed)} min)";
                         contextMenu.Items.Add(new ToolStripMenuItem(menuItemText));
                     }
                 }
