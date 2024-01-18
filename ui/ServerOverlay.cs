@@ -80,7 +80,7 @@ namespace ui
                 DateTime now = DateTime.Now;
 
                 // Get json data
-                var responseString = await new RestService(this._config).GetNeighborsAsync("5e884898da280f36e7c310dd233371204884883bfe2a5094b5e3b3ebc3d60f20");
+                var responseString = await new RestService(this._config).GetGroupAndNodeAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"]);
                 var neighbor = JsonConvert.DeserializeObject<Neighbor>(responseString);
 
                 if (neighbor != null)
