@@ -13,40 +13,31 @@ namespace tardis.Services
         private static readonly HttpClient client = new HttpClient();
         private IConfiguration _config;
 
-        public RestService(IConfiguration config) {
+        public RestService(IConfiguration config)
+        {
             this._config = config;
         }
 
         public async Task<string> GetNeighborsAsync(string hash)
         {
-            /*
-                 {
-                    "Name": "Grupo de Trabajo 1",
-                    "NodeCount": 3,
-                    "Id": "5e884898da280f36e7c310dd233371204884883bfe2a5094b5e3b3ebc3d60f20",
-                    "NeighborNodes": [
-                      {
-                        "Name": "Santi",
-                        "LastCommunication": "2024-01-17T13:26:45Z",
-                        "Status": "Disponible"
-                      },
-                      {
-                        "Name": "Ruben",
-                        "LastCommunication": "2024-01-16T15:30:00Z",
-                        "Status": "Concentrado"
-                      },
-                      {
-                        "Name": "Quique",
-                        "LastCommunication": "2024-01-17T12:00:00Z",
-                        "Status": "Ocupado"
-                      }
-                    ]
-                }
-             */
-
             var responseString = await client.GetStringAsync(_config["ServerSettings:restApiURL"] + "/" + hash + ".json");
 
             return responseString;
+        }
+
+        public async Task<string> GetGroupAndNodeAsync(string groupId, string nodeName)
+        {
+            var responseString = await client.GetStringAsync(_config["ServerSettings:restApiURL"] + "/group/" + groupId + "/node/" + nodeName);
+
+            return responseString;
+        }
+
+        public async Task<string> UpdateNodeStatusAsync(string groupId, string nodeName, string status)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, _config["ServerSettings:restApiURL"] + "/group/" + groupId + "/node/" + nodeName + "/status/" + status);
+            var response = await client.SendAsync(request);
+
+            return await response.Content.ReadAsStringAsync();
         }
     }
 }
