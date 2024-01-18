@@ -52,6 +52,36 @@ function handleGroupAndNode(groupId, nodeName, status = null) {
   });
 }
 
+// Función para limpiar nodos y grupos inactivos
+function cleanInactiveNodesAndGroups() {
+  let groupRef = db.ref("groups");
+  groupRef.once("value").then((snapshot) => {
+    let groups = snapshot.val();
+    let currentTime = moment().tz('Europe/Madrid').format();
+
+    for (let groupId in groups) {
+      let group = groups[groupId];
+      let activeNodes = group.NeighborNodes.filter((node) => {
+        let nodeTime = moment.tz(node.Updatetime, 'Europe/Madrid').valueOf();
+        return currentTime - nodeTime <= 5 * 60 * 1000; // 5 minutos
+      });
+
+      if (activeNodes.length > 0) {
+        // Actualiza los nodos activos del grupo
+        group.NeighborNodes = activeNodes;
+        group.NodeCount = activeNodes.length;
+        groupRef.child(groupId).set(group);
+      } else {
+        // Elimina el grupo si no tiene nodos activos
+        groupRef.child(groupId).remove();
+      }
+    }
+  });
+}
+
+// Ejecuta la función de limpieza cada 1 minuto
+setInterval(cleanInactiveNodesAndGroups, 60 * 1000); // 1 minuto
+
 app.get("/group/:groupId/node/:nodeName", (req, res) => {
   const groupId = req.params.groupId;
   const nodeName = req.params.nodeName;
