@@ -35,6 +35,8 @@ La URL de tu base de datos puedes encontrarla en la consola
 1. Crea o accede a una realtimedatabase
 2. En la pestaña Datos copia la URL de la cabecera (estilo https://tardis-asdsad-aadasd-daas.europe-west1.firebasedatabase.app)
 
+Compilación del proyecto:
+dotnet publish -r win-x64 -p:PublishSingleFile=true --self-contained true -o output
 
 ## Contribución
 
