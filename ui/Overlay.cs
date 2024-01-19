@@ -383,8 +383,6 @@ namespace ui
                 contextMenu.Items.Add(new ToolStripMenuItem(Enum.GetName(typeof(StatusEnum), st), null, (s, e) => ChangeStatus(st)));
             }
             contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(new ToolStripMenuItem("Configuración", null, (s, e) => new Settings(this)));
-            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(new ToolStripMenuItem("Salir", null, (s, e) => Application.Exit()));
             contextMenu.Items.Add(new ToolStripSeparator());
 
