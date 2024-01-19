@@ -1,12 +1,25 @@
 # Tareas Asignadas y Recursos Disponibles Inteligentemente Sincronizados
 
-## Descripción
+Esta aplicación de escritorio proporciona una manera visual y eficiente de compartir tu estado de trabajo con tus compañeros. Aquí están sus principales características:
 
-Este proyecto es una aplicación en C# con .NET Core que ayuda a asignar tareas y gestionar recursos de manera inteligente.
+## Indicador de Estado
+La aplicación crea un indicador visual en forma de una pequeña esfera en tu pantalla que muestra tu estado de trabajo actual. Este indicador se adhiere a los bordes de la pantalla para una visibilidad constante sin obstruir tu espacio de trabajo.
+
+## Detección de Compañeros
+La aplicación puede detectar a tus compañeros ya sea a través de UDP o de un servidor. Esto te permite ver el estado de trabajo de tus compañeros en tiempo real, fomentando una comunicación más eficiente y consciente.
+
+## Compartir Portapapeles
+Una característica única de esta aplicación es su capacidad para compartir el contenido de tu portapapeles con tus compañeros. Esto puede ser útil para compartir rápidamente fragmentos de código, enlaces o cualquier otra información que estés utilizando.
+
+## Notificaciones de Pomodoro
+Para promover una gestión saludable del tiempo, la aplicación te notificará al estilo Pomodoro si has estado concentrado durante un largo periodo de tiempo. Esto te ayuda a recordar tomar descansos regulares, lo que puede mejorar tu productividad y bienestar.
+
+## Personalización
+La aplicación es altamente personalizable, permitiéndote cambiar tu estado de trabajo, ajustar la frecuencia de las actualizaciones y las notificaciones, y mucho más.
 
 ## Requisitos
 
-- .NET Core 3.1 o superior
+- .NET Core 8.0 o superior
 - Visual Studio 2019 o superior
 
 ## Instalación
