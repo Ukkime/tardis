@@ -1,4 +1,4 @@
-# Tareas Asignadas y Recursos Disponibles Inteligentemente
+# Tareas Asignadas y Recursos Disponibles Inteligentemente Sincronizados
 
 ## Descripción
 
