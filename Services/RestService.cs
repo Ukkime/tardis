@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,5 +40,36 @@ namespace tardis.Services
 
             return await response.Content.ReadAsStringAsync();
         }
+
+        internal async Task<string> SendClipboardToNeighborAsync(string groupId, string nodeName, string destNode, string content)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, _config["ServerSettings:restApiURL"] + "/group/" + groupId + "/node/" + destNode + "/clipboard");
+
+            var jsonContent = new Dictionary<string, string>
+            {
+                { "content", content },
+                { "sender", nodeName }
+            };
+            var jsonString = JsonConvert.SerializeObject(jsonContent);
+
+            request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+            var response = await client.SendAsync(request);
+
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        internal async Task<Dictionary<string, string>> RetrieveClipboardAsync(string groupId, string nodeName)
+        {
+            var url = _config["ServerSettings:restApiURL"] + "/group/" + groupId + "/node/" + nodeName + "/clipboard";
+            var responseString = await client.GetStringAsync(_config["ServerSettings:restApiURL"] + "/group/" + groupId + "/node/" + nodeName + "/clipboard");
+            if (responseString != "-1")
+            {
+                return JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString);
+            } else
+            {
+                return null;
+            }
+        }
+
     }
 }

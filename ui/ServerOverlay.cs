@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -32,6 +33,8 @@ namespace ui
         private GraphicsPath path2 = new GraphicsPath();
 
         private System.Timers.Timer _timer;
+        private System.Timers.Timer _timerClipboard;
+
 
         // Constructor
         public ServerOverlay(IConfiguration config) : base(config)
@@ -62,9 +65,13 @@ namespace ui
             ChangeStatus(StatusEnum.Disponible);
             NodeName = _config["GeneralSettings:nodeName"];
 
-            _timer = new System.Timers.Timer(1000); // Intervalo de 10 segundos
+            _timer = new System.Timers.Timer(Int32.Parse(_config["ServerSettings:updateFrequency"]) * 1000);
             _timer.Elapsed += async (sender, e) => await UpdateNeighborsAsync();
             _timer.Start();
+
+            _timerClipboard = new System.Timers.Timer(Int32.Parse(_config["ServerSettings:updateClipboardFrequency"]) * 1000);
+            _timerClipboard.Elapsed += CheckClipboardContent;
+            _timerClipboard.Start();
 
             // Crear un menú contextual y agregarlo al formulario
             UpdateContextMenu();
@@ -365,16 +372,83 @@ namespace ui
                         double secondsPassed = timeSpan.TotalSeconds; // Total de segundos pasados
 
                         string menuItemText = $"{neighbor["name"]}: {neighbor["status"]} desde las {neighbor["datetime"].Substring(11, neighbor["datetime"].Length - 11)} (hace {Math.Floor(minutesPassed)} min)";
-                        contextMenu.Items.Add(new ToolStripMenuItem(menuItemText));
+                        
+                        ToolStripMenuItem mainMenuItem = new ToolStripMenuItem(menuItemText);
+                        ToolStripMenuItem subMenuItem = new ToolStripMenuItem("Enviar clipboard", null, (s, e) => SendClipboardAsync(neighbor["name"]));
+
+                        mainMenuItem.DropDownItems.Add(subMenuItem);
+                        contextMenu.Items.Add(mainMenuItem);
                     }
                 }
             }
             else
             {
                 contextMenu.Items.Add(new ToolStripMenuItem("No se han detectado compañeros"));
+
+                //ToolStripMenuItem mainMenuItem = new ToolStripMenuItem("test");
+                //ToolStripMenuItem subMenuItem = new ToolStripMenuItem("Enviar clipboard", null, (s, e) => SendClipboardAsync(NodeName));
+
+                //mainMenuItem.DropDownItems.Add(subMenuItem);
+                //contextMenu.Items.Add(mainMenuItem);
             }
 
             this.ContextMenuStrip = contextMenu;
+        }
+
+        protected async Task SendClipboardAsync(string destNode)
+        {
+            string result = await new RestService(this._config).SendClipboardToNeighborAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"], _config["GeneralSettings:nodeName"], GetClipboardText());
+        }
+
+        private async void CheckClipboardContent(object source, ElapsedEventArgs e)
+        {
+            var clipboardContent = await new RestService(_config).RetrieveClipboardAsync(_config["ServerSettings:restApiNeighborCode"], NodeName);
+            if (clipboardContent != null)
+            {
+                // Muestra un cuadro de diálogo preguntando al usuario si quiere cargar el contenido del portapapeles
+                var result = MessageBox.Show("¿Quieres cargar este contenido en tu portapapeles?\n\n" + clipboardContent["clipboardContent"], clipboardContent["sender"] + " te envia su clipboard", MessageBoxButtons.YesNo);
+
+                // Si el usuario elige 'Yes', carga el contenido del portapapeles
+                if (result == DialogResult.Yes)
+                {
+                    SetClipboardText(clipboardContent["clipboardContent"]);
+                }
+            }
+        }
+
+        private static string GetClipboardText()
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = "Get-Clipboard",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+
+            Process process = new Process { StartInfo = startInfo };
+            process.Start();
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            return output;
+        }
+
+        private static void SetClipboardText(string text)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = $"Set-Clipboard -Value '{text}'",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            Process process = new Process { StartInfo = startInfo };
+            process.Start();
+            process.WaitForExit();
         }
     }
 }
