@@ -18,6 +18,7 @@
     "__important__": "Solo activo si el neighborMode = SERVER",
     "restApiURL": "http://localhost:3000",
     "restApiNeighborCode": "SHA256-887VH8DOGORDVGDOGDBGPD9BGPDBG9DB",
-    "updateFrequency": 1
+    "updateFrequency": 30,
+    "updateClipboardFrequency": 10
   }
 }
