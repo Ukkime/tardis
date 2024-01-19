@@ -31,6 +31,8 @@ Para generar el archivo serviceAccountKey.json, necesitas crear un proyecto de F
 5. Confirma la acción y tu navegador descargará un archivo JSON que contiene tu clave de servicio.
 6. Este archivo JSON es tu serviceAccountKey.json y contiene toda la información necesaria para autenticar tu servidor con Firebase. Deberías mantener este archivo seguro y no compartirlo públicamente, ya que contiene información sensible.
 
+* Recuerda hacer un npm install antes de arrancar la api con node .\app.js
+
 La URL de tu base de datos puedes encontrarla en la consola
 1. Crea o accede a una realtimedatabase
 2. En la pestaña Datos copia la URL de la cabecera (estilo https://tardis-asdsad-aadasd-daas.europe-west1.firebasedatabase.app)
