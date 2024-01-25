@@ -395,7 +395,7 @@ namespace ui
 
         protected async Task SendClipboardAsync(string destNode)
         {
-            string result = await new RestService(this._config).SendClipboardToNeighborAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"], _config["GeneralSettings:nodeName"], GetClipboardText());
+            string result = await new RestService(this._config).SendClipboardToNeighborAsync(_config["ServerSettings:restApiNeighborCode"], _config["GeneralSettings:nodeName"],destNode, GetClipboardText());
         }
 
         private async void CheckClipboardContent(object source, ElapsedEventArgs e)
